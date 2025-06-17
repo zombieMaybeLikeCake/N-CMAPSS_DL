@@ -9,6 +9,7 @@ import time
 import matplotlib
 import numpy as np
 import pandas as pd
+
 import seaborn as sns
 
 import sklearn as sk
@@ -18,7 +19,7 @@ from sklearn import metrics
 from sklearn import preprocessing
 from sklearn import pipeline
 from sklearn.metrics import mean_squared_error
-
+from sklearn.preprocessing import StandardScaler
 
 
 def df_all_creator(data_filepath, sampling):
@@ -260,36 +261,143 @@ def time_window_slicing_sample_save (input_array, sequence_length, stride, index
 
 
 
+# class Input_Gen(object):
+#     '''
+#     class for data preparation (sequence generator)
+#     '''
+
+#     def __init__(self, df_train, df_test, cols_normalize, sequence_length, sequence_cols, sample_dir_path,
+#                  unit_index, sampling, stride):
+#         '''
+
+#         '''
+#         # self.__logger = logging.getLogger('data preparation for using it as the network input')
+#         print("the number of input signals: ", len(cols_normalize))
+
+#         min_max_scaler = preprocessing.MinMaxScaler(feature_range=(-1, 1))
+
+#         norm_df = pd.DataFrame(min_max_scaler.fit_transform(df_train[cols_normalize]),
+#                                columns=cols_normalize,
+#                                index=df_train.index)
+#         join_df = df_train[df_train.columns.difference(cols_normalize)].join(norm_df)
+#         df_train = join_df.reindex(columns=df_train.columns)
+
+#         norm_test_df = pd.DataFrame(min_max_scaler.transform(df_test[cols_normalize]), columns=cols_normalize,
+#                                     index=df_test.index)
+#         test_join_df = df_test[df_test.columns.difference(cols_normalize)].join(norm_test_df)
+#         df_test = test_join_df.reindex(columns=df_test.columns)
+#         df_test = df_test.reset_index(drop=True)
+
+#         self.df_train = df_train
+#         self.df_test = df_test
+
+#         print (self.df_train)
+#         print (self.df_test)
+
+#         self.cols_normalize = cols_normalize
+#         self.sequence_length = sequence_length
+#         self.sequence_cols = sequence_cols
+#         self.sample_dir_path = sample_dir_path
+#         self.unit_index = np.float64(unit_index)
+#         self.sampling = sampling
+#         self.stride = stride
+
+
+#     def seq_gen(self):
+#         '''
+#         concatenate vectors for NNs
+#         :param :
+#         :param :
+#         :return:
+#         '''
+
+#         if any(index == self.unit_index for index in self.df_train['unit'].unique()):
+#             print ("Unit for Train")
+#             label_array = time_window_slicing_label_save(self.df_train, self.sequence_length,
+#                                            self.stride, self.unit_index, self.sample_dir_path, sequence_cols='RUL')
+#             sample_array = time_window_slicing_sample_save(self.df_train, self.sequence_length,
+#                                            self.stride, self.unit_index, self.sample_dir_path, sequence_cols=self.cols_normalize)
+
+#         else:
+#             print("Unit for Test")
+#             label_array = time_window_slicing_label_save(self.df_test, self.sequence_length,
+#                                            self.stride, self.unit_index, self.sample_dir_path, sequence_cols='RUL')
+#             sample_array = time_window_slicing_sample_save(self.df_test, self.sequence_length,
+#                                            self.stride, self.unit_index, self.sample_dir_path, sequence_cols=self.cols_normalize)
+
+#         # sample_split_lst = np.array_split(sample_array, 3, axis=2)
+#         # print (sample_split_lst[0].shape)
+#         # print(sample_split_lst[1].shape)
+#         # print(sample_split_lst[2].shape)
+
+#         # label_split_lst = np.array_split(label_array, 3, axis=0)
+#         # print (label_split_lst[0].shape)
+#         # print(label_split_lst[1].shape)
+#         # print(label_split_lst[2].shape)
+
+#         print("sample_array.shape", sample_array.shape)
+#         print("label_array.shape", label_array.shape)
+
+
+
+#         np.savez_compressed(os.path.join(self.sample_dir_path, 'Unit%s_win%s_str%s_smp%s' %(str(int(self.unit_index)), self.sequence_length, self.stride, self.sampling)),
+#                                          sample=sample_array, label=label_array)
+#         print ("unit saved")
+
+#         return
+
+  # 用來進行 Z-score 標準化
+
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import StandardScaler  # 用來進行 Z-score 標準化
+
 class Input_Gen(object):
     '''
     class for data preparation (sequence generator)
     '''
 
     def __init__(self, df_train, df_test, cols_normalize, sequence_length, sequence_cols, sample_dir_path,
-                 unit_index, sampling, stride):
+                 unit_index, sampling, stride, alpha=0.4, n_samples=10, apply_exponential_smoothing=False):
         '''
-
+        alpha: 指數平滑的平滑因子，範圍通常是 [0, 1]
+        n_samples: 用來減少過濾延遲的樣本數，排除初始的延遲部分
+        apply_exponential_smoothing: 是否應用指數平滑
         '''
-        # self.__logger = logging.getLogger('data preparation for using it as the network input')
         print("the number of input signals: ", len(cols_normalize))
-        min_max_scaler = preprocessing.MinMaxScaler(feature_range=(-1, 1))
-        norm_df = pd.DataFrame(min_max_scaler.fit_transform(df_train[cols_normalize]),
+
+        # Z-score 標準化處理 (使用 StandardScaler)
+        scaler = StandardScaler()
+
+        # 訓練集標準化
+        norm_df = pd.DataFrame(scaler.fit_transform(df_train[cols_normalize]),
                                columns=cols_normalize,
                                index=df_train.index)
+        # 合併標準化後的資料與其他資料
         join_df = df_train[df_train.columns.difference(cols_normalize)].join(norm_df)
         df_train = join_df.reindex(columns=df_train.columns)
 
-        norm_test_df = pd.DataFrame(min_max_scaler.transform(df_test[cols_normalize]), columns=cols_normalize,
+        # 測試集標準化
+        norm_test_df = pd.DataFrame(scaler.transform(df_test[cols_normalize]), columns=cols_normalize,
                                     index=df_test.index)
         test_join_df = df_test[df_test.columns.difference(cols_normalize)].join(norm_test_df)
         df_test = test_join_df.reindex(columns=df_test.columns)
         df_test = df_test.reset_index(drop=True)
 
+        # 排除所有為零的感測器
+        # df_train = self.remove_zero_sensors(df_train, cols_normalize)
+        # df_test = self.remove_zero_sensors(df_test, cols_normalize)
+
+        # 加入指數平滑處理
+        if apply_exponential_smoothing:
+            df_train = self.exponential_smoothing(df_train, cols_normalize, n_samples, alpha)
+            df_test = self.exponential_smoothing(df_test, cols_normalize, n_samples, alpha)
+
         self.df_train = df_train
         self.df_test = df_test
 
-        print (self.df_train)
-        print (self.df_test)
+        print(self.df_train)
+        print(self.df_test)
 
         self.cols_normalize = cols_normalize
         self.sequence_length = sequence_length
@@ -299,6 +407,49 @@ class Input_Gen(object):
         self.sampling = sampling
         self.stride = stride
 
+    def remove_zero_sensors(self, df, cols_normalize):
+        '''
+        排除那些所有值都是零的感測器
+        :param df: 輸入的資料框
+        :param cols_normalize: 需要檢查的感測器欄位
+        :return: 刪除零感測器後的資料框
+        '''
+        # 檢查每列是否所有值都是零
+        non_zero_sensors = (df[cols_normalize].apply(lambda x: not (x == 0).all(), axis=0))
+
+        # 確保 non_zero_sensors 的索引與 df 的欄位一致
+        non_zero_sensors = non_zero_sensors[cols_normalize]  # 確保這裡的索引對齊
+
+        # 只保留那些非零的感測器（即非零列）
+        df = df.loc[:, non_zero_sensors]
+
+        return df
+
+
+    def exponential_smoothing(self, df, sensors, n_samples, alpha=0.4):
+        '''
+        Apply exponential smoothing to the data.
+        :param df: DataFrame to smooth
+        :param sensors: List of columns to apply smoothing on
+        :param n_samples: Number of samples to drop at the start to avoid filter delay
+        :param alpha: Smoothing factor for the exponential smoothing
+        :return: DataFrame with smoothed values
+        '''
+        df = df.copy()
+
+        # first, apply the exponential weighted mean
+        df[sensors] = df.groupby('unit')['unit'].apply(lambda x: x.ewm(alpha=alpha).mean()).reset_index(level=0, drop=True)
+
+        # second, drop first n_samples of each unit to reduce filter delay
+        def create_mask(data, samples):
+            result = np.ones_like(data)
+            result[0:samples] = 0
+            return result
+
+        mask = df.groupby('unit')['unit'].transform(create_mask, samples=n_samples).astype(bool)
+        df = df[mask]
+        
+        return df
 
     def seq_gen(self):
         '''
@@ -309,39 +460,31 @@ class Input_Gen(object):
         '''
 
         if any(index == self.unit_index for index in self.df_train['unit'].unique()):
-            print ("Unit for Train")
+            print("Unit for Train")
             label_array = time_window_slicing_label_save(self.df_train, self.sequence_length,
-                                           self.stride, self.unit_index, self.sample_dir_path, sequence_cols='RUL')
+                                                       self.stride, self.unit_index, self.sample_dir_path, sequence_cols='RUL')
             sample_array = time_window_slicing_sample_save(self.df_train, self.sequence_length,
-                                           self.stride, self.unit_index, self.sample_dir_path, sequence_cols=self.cols_normalize)
+                                                       self.stride, self.unit_index, self.sample_dir_path, sequence_cols=self.cols_normalize)
 
         else:
             print("Unit for Test")
             label_array = time_window_slicing_label_save(self.df_test, self.sequence_length,
-                                           self.stride, self.unit_index, self.sample_dir_path, sequence_cols='RUL')
+                                                       self.stride, self.unit_index, self.sample_dir_path, sequence_cols='RUL')
             sample_array = time_window_slicing_sample_save(self.df_test, self.sequence_length,
-                                           self.stride, self.unit_index, self.sample_dir_path, sequence_cols=self.cols_normalize)
+                                                       self.stride, self.unit_index, self.sample_dir_path, sequence_cols=self.cols_normalize)
 
-        # sample_split_lst = np.array_split(sample_array, 3, axis=2)
-        # print (sample_split_lst[0].shape)
-        # print(sample_split_lst[1].shape)
-        # print(sample_split_lst[2].shape)
-
-        # label_split_lst = np.array_split(label_array, 3, axis=0)
-        # print (label_split_lst[0].shape)
-        # print(label_split_lst[1].shape)
-        # print(label_split_lst[2].shape)
+        # 將大於 65 的 label 修改為 65
+        label_array[label_array > 65] = 65
 
         print("sample_array.shape", sample_array.shape)
         print("label_array.shape", label_array.shape)
 
-
-
         np.savez_compressed(os.path.join(self.sample_dir_path, 'Unit%s_win%s_str%s_smp%s' %(str(int(self.unit_index)), self.sequence_length, self.stride, self.sampling)),
                                          sample=sample_array, label=label_array)
-        print ("unit saved")
+        print("unit saved")
 
         return
+
 
 
 
