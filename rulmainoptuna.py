@@ -144,5 +144,5 @@ def objective(trial):
 
 if __name__ == '__main__':
     study = optuna.create_study(direction='minimize')
-    study.optimize(objective, n_trials=200)
+    study.optimize(objective, n_trials=150)
     print("Best parameters:", study.best_params)
