@@ -126,8 +126,8 @@ def main():
 
     cols_normalize = df_train.columns.difference(['RUL', 'unit'])
     sequence_cols = df_train.columns.difference(['RUL', 'unit'])
-
-
+    df_train = df_train.rename(str,axis="columns") 
+    df_test = df_test.rename(str,axis="columns")
     if selector == 0:
         for unit_index in units_index_train:
             data_class = Input_Gen (df_train, df_test, cols_normalize, sequence_length, sequence_cols, sample_dir_path,
