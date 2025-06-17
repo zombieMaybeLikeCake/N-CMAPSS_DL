@@ -12,7 +12,7 @@
 draw_hot_map.py
 test.py
 predict.py
-
+*.npz
 *.log
 *.pdf
 FD001RUL.png
