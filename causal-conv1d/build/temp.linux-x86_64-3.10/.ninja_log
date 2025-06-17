@@ -1,0 +1,5 @@
+# ninja log v5
+1	3438	1720426259311926222	/data/Bi-Mamba4TS/causal-conv1d/build/temp.linux-x86_64-3.10/csrc/causal_conv1d_update.o	fc4a3d8fbbf10177
+1	13480	1720426269332360093	/data/Bi-Mamba4TS/causal-conv1d/build/temp.linux-x86_64-3.10/csrc/causal_conv1d_fwd.o	9e8f49a3f42cffaa
+1	16170	1720426272040477405	/data/Bi-Mamba4TS/causal-conv1d/build/temp.linux-x86_64-3.10/csrc/causal_conv1d.o	b08c0d55f3412dda
+1	158586	1720426414342671681	/data/Bi-Mamba4TS/causal-conv1d/build/temp.linux-x86_64-3.10/csrc/causal_conv1d_bwd.o	ebd60769a530c854

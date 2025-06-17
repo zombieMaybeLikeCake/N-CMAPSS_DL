@@ -1,4 +1,4 @@
-work_space="/mnt/data/lab/Bi-Mamba4TS/main.py"
+work_space="/data/Bi-Mamba4TS/main.py"
 # model params
 model="BiMamba4TS"
 seq_len=96
@@ -10,7 +10,7 @@ d_model=64
 d_ff=128
 d_state=8
 batch_size=32
-gpu=1
+gpu=0
 # dataset
 for patch_len in 8 12 24 48
 do
@@ -37,7 +37,7 @@ do
             for random_seed in 2022
             do
                 log_file="${random_seed}_${dataset_name}_${model}(${seq_len}-${pred_len})(${patch_len}-${stride})_el${e_layers}_ch${ch_ind}_res${residual}_bi${bi_dir}.log"
-                python $work_space $model \
+                python3 $work_space $model \
                 --gpu=$gpu \
                 --embed_type=0 --num_workers=8 --seed=$random_seed --batch_size=$batch_size \
                 --seq_len=$seq_len --pred_len=$pred_len \

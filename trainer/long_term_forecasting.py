@@ -108,6 +108,7 @@ class LTF_Trainer():
                 # For those with Decoder, set Decoder input of them
                 dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
                 dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float()
+                # batch_x torch.Size([32, 96, 7])
                 outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
                 # Graph A
                 if hasattr(self.args, 'use_gcn') and self.args.use_gcn:
