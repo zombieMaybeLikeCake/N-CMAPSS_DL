@@ -12,6 +12,9 @@
 draw_hot_map.py
 test.py
 predict.py
+
+*o
+*.so
 *.npz
 *.log
 *.pdf
