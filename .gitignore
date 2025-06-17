@@ -127,3 +127,5 @@ results/2022/ETTh1(M)_96_96_loss(mse)/BiMamba4TS_bs32_el2_(dm64+df128)_(dc2+ds8)
 results/2022/ETTh1(M)_96_96_loss(mse)/BiMamba4TS_bs32_el2_(dm64+df128)_(dc2+ds8)_dp0.10_(pl48+st24)/result.txt
 results/2022/ETTh1(M)_96_96_loss(mse)/BiMamba4TS_bs32_el2_(dm64+df128)_(dc2+ds8)_dp0.10_(pl8+st4)/loss.png
 results/2022/ETTh1(M)_96_96_loss(mse)/BiMamba4TS_bs32_el2_(dm64+df128)_(dc2+ds8)_dp0.10_(pl8+st4)/result.txt
+causal-conv1d/build/lib.linux-x86_64-3.10/causal_conv1d_cuda.cpython-310-x86_64-linux-gnu.so
+causal-conv1d/build/temp.linux-x86_64-3.10/csrc/causal_conv1d_bwd.o
