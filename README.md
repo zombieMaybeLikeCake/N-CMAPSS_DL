@@ -10,20 +10,21 @@
 
 🚩**News**(April 26, 2024): We publish our article [v1] on [arXiv](https://arxiv.org/abs/2404.15772). The repo is currently private.
 
+
 # Key Designs of the proposed Bi-Mamba+🔑
 
-🤠 Exploring the validity of Mamba in long-term time series forecasting (LTSF).
+🤠 Exploring the validity of Mamba in multivariate long-term time series forecasting (MLTSF).
 
-🤠 Proposing a unified archetecture for channel-independent and channel-mixing tokenization strtegies based on a novel designed series-relation-aware (SRA) decider.
+🤠 Proposing a unified architecture for channel-independent and channel-mixing tokenization strategies based on a novel designed series-relation-aware (SRA) decider.
 
 🤠 Proposing Mamba+, an improved Mamba block specifically designed for LTSF to preserve historical information in a longer range.
 
-🤠 Introducing a Bidirectional Mamba+ in a patching manner. The model can capture intra-series dependencies or inter-series dependencies in a finer granularity.
+🤠 Introducing a Bidirectional Mamba+ in a patching manner. The model captures intra-series dependencies or inter-series dependencies based on the variable correlation of specific datasets.
 
 
 ![Architecture of Bi-Mamba+](pics/architecture.png "Architecture of Bi-Mamba4TS")
 
-![Architecture of Bi-Mamba+ encoder](pics/bi-mamba-encoder.png "Architecture of Bi-Mamba4TS")
+<div style="text-align: center;"><img src="pics/bi-mamba-encoder.png" alt="Architecture of Bi-Mamba+ encoder" width="50%"></div>
 
 # Datasets
 
@@ -37,16 +38,24 @@ All datasets are widely used and are publicly available at [https://github.com/z
 
 ## Main Results
 
-Copared to [iTransformer](https://openreview.net/forum?id=JePfAI8fah), the current SOTA Transformer-based model, the MSE results of Bi-Mamba+ are reduced by 4.72% and the MAE results are reduced by 2.60% on average.
+Compared to [iTransformer](https://openreview.net/forum?id=JePfAI8fah), the current SOTA Transformer-based model, the MSE results of Bi-Mamba+ are reduced by 4.85% and the MAE results are reduced by 2.70% on average. The improvement comes to 3.85% and 2.75% compared to [S-Mamba](https://arxiv.org/abs/2403.11144).
 
-![main results](pics/main-result.png "main results")
+![main results](pics/full-main.png "main results")
 
 ## Ablation Study
 
-We calculate the average MSE and MAE results of (i) without SRA decider (w/o SRA-I & w/o SRA-M); (ii) without bidirectional design (w/o Bi); (iii) without residual connection (w/o Residual) (vi) S-Mamba; (v) PatchTST. The SRA decider, bidirectional and residual design are all valid.
+We calculate the average MSE and MAE results of (i) without SRA decider (w/o SRA-I & w/o SRA-M); (ii) without bidirectional design (w/o Bi); (iii) replacing Mamba+ with Mamba (Bi-Mamba), (iv) without residual connection (w/o Residual); (v) S-Mamba and (vi) PatchTST. The SRA decider, added forget gate, bidirectional and residual design are all valid.
 
-![ablation](pics/ablation-result.png "ablation")
+![ablation](pics/full-ablation.png "ablation")
 
+## Model Efficiency
+
+We conduct the following experiments to comprehensively evaluate the model efficiency from (a) predicting accuracy, (b) memory usage and (c) training speed. We set $L=96,H=96$ as the forecasting task and use $Batch=32$ for ETTh1 and Traffic. Bi-Mamba+ strikes a good balance among predicting performance, training speed and memory usage.
+
+<div style="display: flex; justify-content: space-between;">
+  <img src="pics/efficiency-ETTh1.png" alt="ETTh1" style="width: 49%;">
+  <img src="pics/efficiency-traffic.png" alt="Traffic" style="width: 49%;">
+</div>
 
 # Getting Start🛫
 
@@ -64,11 +73,11 @@ conda install packaging
 cd causal-conv1d;CAUSAL_CONV1D_FORCE_BUILD=TRUE pip install .;cd ..
 cd mamba_plus;MAMBA_FORCE_BUILD=TRUE pip install .;cd ..
 ```
-These python package installing tips is work up to now (04.24 2024).
+These python package installing tips is work up to `(04.24 2024)`.
 
 I strongly recommand doing all these on **Linux**, or, WSL2 on Windows! The default cuda version should be at least 11.8 (or 11.6? seems that new versions allow for lower cuda versions).
 
-The tips listed here will force local compilation of causal-conv1d and mamba_plus. The mamba_plus here is the modified hardware-aware parallel computing algorithm of our proposed **Mamba+**. If you want to run S-Mamba or else Mamba-based models, just go with `cd mamba;pip install .` or `pip install mamba-ssm` in a new python environment to download the original mamba_ssm of **Mamba**. Please use different python environments for `mamba_plus` and `mamba_ssm`, because the `selective_scan` program may be covered by one of them.
+The tips listed here will force local compilation of causal-conv1d and mamba_plus. The mamba_plus here is the modified hardware-aware parallel computing algorithm of our proposed **Mamba+**. If you want to run S-Mamba or else Mamba-based models, just go with `cd mamba;pip install .` or `pip install mamba-ssm` **in a new python environment** to download the original mamba_ssm of **Mamba**. Please use different python environments for `mamba_plus` and `mamba_ssm`, because the `selective_scan` program may be covered by one of them.
 
 Take cuda 11.8 as an example, there should be a directory named 'cuda-11.8' in `/usr/local`. You should make sure that cuda exists in the path. Take `bash` as an example. Run `vi ~/.bashrc` and make sure the following paths exist:
 ```bash
@@ -77,10 +86,18 @@ export LD_LIBRARY_PATH=/usr/local/cuda-11.8/targets/x86_64-linux/lib:$LD_LIBRARY
 export PATH=/usr/local/cuda-11.8/bin:$PATH
 ```
 
+After saving the new profile, run `bash` again and your SHELL will identify the new env path.
+
 Of course, if you do not want to force local compilation, these paths are not necessary.
 
 2. Run the script: Find the model you want to run in `/scripts` and choose the dataset you want to use. 
-> Run `./scripts/{model}/{dataset}.sh` to start training.
+> Run `sh ./scripts/{model}/{dataset}.sh 1` to start training.
+
+> Run `sh ./scripts/{model}/{dataset}.sh 0` to start testing.
+
+> Run `sh ./scripts/{model}/{dataset}.sh -1` to start predicting.
+
+We provide the trained models in `checkpoints`, currently the Bi-Mamba+ for *Weather* is offered.
 
 # Datasets🔗
 We have compiled the datasets we need to use and provide download link: [data.zip](https://drive.google.com/file/d/1krbMHQXB-aV9vvYs2bRsJnXPLa4BKxzG/view?usp=drive_link).
