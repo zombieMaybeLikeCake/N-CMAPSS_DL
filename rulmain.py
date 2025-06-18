@@ -71,7 +71,7 @@ def main():
             sp_d_model=256
             num_scales=4
             d_model=1024
-            bsize = 32
+            bsize = 16
         elif datasetname=="FD004":
             sp_d_model=256
             num_scales=2
@@ -125,6 +125,7 @@ def main():
                 optimizer.step()                                                                                                                                                                                                                                        
                 sumtrainloss+=train_loss.item()*rul.size()[0]
             sumtrainloss = sumtrainloss / x_train.shape[0]
+            print(f"x_train.shape[0]:{x_train.shape[0]}")
             # mselist.append(sumtrainloss)
             model.eval()
             sumtrainloss=0
