@@ -107,22 +107,20 @@ def gen_label_wrapper(df, sequence_length, label, unit_nrs=np.array([])):
     return label_array
  
 def gen_test_data(df, sequence_length, columns, mask_value,unit_nr):
-    
     # 後補零
     # if df.shape[0] < sequence_length and (unit_nr==204 or unit_nr==239):
-    if df.shape[0] < sequence_length and (unit_nr==204):
+    # if df.shape[0] < sequence_length and (unit_nr==204):
         # 創建一個全零矩陣
-        data_matrix = np.full(shape=(sequence_length, len(columns)), fill_value=mask_value)  # pad
+        # data_matrix = np.full(shape=(sequence_length, len(columns)), fill_value=mask_value)  # pad
     # 將數據填充在矩陣的前面
-        data_matrix[:df.shape[0], :] = df[columns].values  # fill with available data
-        print(f"{unit_nr} is back add 0")
+        # data_matrix[:df.shape[0], :] = df[columns].values  # fill with available data
+        # print(f"{unit_nr} is back add 0")
     # 前補零
-    elif df.shape[0] < sequence_length:
+    if df.shape[0] < sequence_length:
         data_matrix = np.full(shape=(sequence_length, len(columns)), fill_value=mask_value) # pad
         idx = data_matrix.shape[0] - df.shape[0]
         data_matrix[idx:,:] = df[columns].values  # fill with available data
-        print(unit_nr)
-    
+        # print(unit_nr)
     else:
         data_matrix = df[columns].values
     # specifically yield the last possible sequence

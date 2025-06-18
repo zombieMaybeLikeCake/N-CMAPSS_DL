@@ -21,6 +21,8 @@ import models.TSMamba
 from sklearn import preprocessing
 from torch.utils.data import DataLoader
 import rulutils
+import torch.nn.functional as F
+logging.basicConfig(level=logging.WARNING)
 def build_dir(name):
     model_dir = osp.join("./experiments",name)
     os.makedirs(model_dir,exist_ok=True)
@@ -44,7 +46,7 @@ class RULDataset(Dataset):
         return history,self.y[index]
     def __len__(self):
         return self.len
-def train_model(params, train_loader, val_loader,datasetname):
+def train_model(params,datasetname, train_loader,val_loader,test_loader, x_train,x_val):
     # Define the model based on params
     model = models.TSMamba.Model(
         num_scales=params['num_scales'],
@@ -66,7 +68,6 @@ def train_model(params, train_loader, val_loader,datasetname):
         sp_d_model=params['sp_d_model']
     )
     # Training and validation process
-    criterion = nn.MSELoss(reduction="mean")
     optimizer = optim.Adam(model.parameters(), lr=0.00001)
     model = model.cuda()
     patience=20
@@ -75,7 +76,6 @@ def train_model(params, train_loader, val_loader,datasetname):
     best_val_loss = float('inf')
     model_dir=r"./checkpoint"
     for epoch in range(0,100):
-        print(f"epoch: {epoch}")
         model.train() 
         sumvalloss=0
         sumtrainloss=0
@@ -86,26 +86,15 @@ def train_model(params, train_loader, val_loader,datasetname):
             train_loss.backward()
             optimizer.step()                                                                                                                                                                                                                                        
             sumtrainloss+=train_loss.item()*rul.size()[0]
-        sumtrainloss = sumtrainloss / 32
-            # mselist.append(sumtrainloss)
+        sumtrainloss = sumtrainloss / x_train.shape[0]
         model.eval()
-
         with torch.no_grad():
-            # sumtrainloss = sumtrainloss / x_train.shape[0]
             for i,(history,rul) in enumerate(val_loader):
                 prediction = model.forward(history)
                 val_loss = model.loss_function(prediction,rul)
                 sumvalloss += val_loss.item()*rul.size(0)
-            sumvalloss = sumvalloss / 32
-            # print(f"train loss:{sumtrainloss:.2f} val loss:{sumvalloss:.2f}")
+            sumvalloss = sumvalloss / x_val.shape[0]
             patience_c+=1
-                # if(sumvalloss<minavgvaloss):
-                #     patience_c=0
-                #     if val_loss < best_val_loss:
-                #         best_val_loss = val_loss
-                #         print(f"New best model found with val_loss: {sumvalloss:.5f}")
-                #         torch.save(model.state_dict(),osp.join(model_dir,f"temp.pt"))
-                #         minavgvaloss=sumvalloss
             if(sumvalloss<minavgvaloss):
                 patience_c=0
                 torch.save(model.state_dict(),osp.join(model_dir,f"{datasetname}.pt"))
@@ -114,7 +103,22 @@ def train_model(params, train_loader, val_loader,datasetname):
                     break
             torch.cuda.empty_cache()
     print(f"best model found with val_loss: {minavgvaloss:.5f}")
-    return minavgvaloss
+    model.eval()    
+    test_rmse = 0.0
+    test_score = 0.0
+    model.load_state_dict(torch.load(osp.join(model_dir,f"{datasetname}.pt"), weights_only=True))
+    with torch.no_grad():
+        for i, (history, rul) in enumerate(test_loader):
+            history, rul = history.cuda(), rul.cuda()  # Move both tensors to CUDA
+            output = model.forward(history)  # Forward pass with GPU data
+            rmse_loss = torch.sqrt(F.mse_loss(output[0], rul[0], reduction='mean'))
+            temp=rulutils.score(rul.cpu().detach().numpy(),output.cpu().detach().numpy())
+            # print(f"no.{i} socre : {temp}")
+            test_score += temp[0]
+            test_rmse += rmse_loss.item()
+        test_rmse /= len(test_loader)
+    print(f"Test score: {test_score:.5f} Test rmse:{test_rmse:.5f}")
+    return test_score
 def objective(trial):
     # sequence_length = 32
     params = {
@@ -127,7 +131,7 @@ def objective(trial):
          # Keep as float, not 2's power
     }
     # Ensure d_model is even
-    datasetname="FD001"
+    datasetname="FD002"
     sensors = ['s_2','s_3', 's_4', 's_7','s_8','s_9','s_11', 's_12','s_13','s_14','s_15','s_17','s_20','s_21']
     alpha = 0.1
     threshold = 120
@@ -136,13 +140,15 @@ def objective(trial):
     x_train, y_train, x_val, y_val, x_test, y_test = rulutils.get_data(datasetname, sensors, params['sequence_length'], alpha, threshold)
     train_dataset = RULDataset(x_train,y_train)
     val_dataset = RULDataset(x_val,y_val)
-            # test_dataset = RULDataset(x_test, y_test)
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
-    val_loss = train_model(params, train_loader, val_loader,datasetname)
+    test_dataset = RULDataset(x_test, y_test)
+    train_loader = DataLoader(train_dataset, batch_size=48, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=48, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
+    val_loss = train_model(params,datasetname, train_loader,val_loader,test_loader,x_train,x_val)
     return val_loss
 
 if __name__ == '__main__':
-    study = optuna.create_study(direction='minimize')
+    datasetname="FD002"
+    study = optuna.create_study(study_name=f"{datasetname}_study", storage=f"sqlite:///{datasetname}_study.db", load_if_exists=True,direction='minimize')
     study.optimize(objective, n_trials=150)
     print("Best parameters:", study.best_params)
